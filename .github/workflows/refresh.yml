@@ -1,0 +1,58 @@
+name: Scheduled deal refresh
+
+on:
+  schedule:
+    # Temporary acceptance window; restore daily after observing a schedule run.
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scheduled-deal-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    uses: wlzh/let-deals-radar/.github/workflows/update.yml@main
+    with:
+      target_repository: wlzh/let-deals-radar
+      with_replies: true
+      recent_days: '90'
+    secrets:
+      REPO_PUSH_KEY: ${{ secrets.LDR_REPO_PUSH_KEY }}
+
+  record:
+    needs: refresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Record verified success and keep scheduler active
+        env:
+          REFRESHED_SHA: ${{ needs.refresh.outputs.refreshed_sha }}
+        run: |
+          python3 - <<'PY'
+          from datetime import datetime, timezone
+          import json
+          import os
+          from pathlib import Path
+
+          sha = os.environ['REFRESHED_SHA']
+          if len(sha) != 40 or any(c not in '0123456789abcdef' for c in sha):
+              raise SystemExit('Missing verified original-repository revision')
+          record = {
+              'completed_at': datetime.now(timezone.utc).isoformat(),
+              'source_repository': 'wlzh/let-deals-radar',
+              'source_revision': sha,
+              'run_url': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+          }
+          Path('last-success.json').write_text(json.dumps(record, indent=2) + '\n')
+          PY
+          git add last-success.json
+          git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m 'chore: record verified refresh'
+          git pull --rebase origin main
+          git push origin HEAD:main
