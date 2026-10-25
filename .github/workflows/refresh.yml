@@ -1,20 +1,50 @@
-name: Scheduled deal refresh
+name: Automatic deal refresh
+run-name: ${{ inputs.mode == 'auto' && 'Daily refresh' || '5m probe' }} after ${{ inputs.parent_run_id || 'operator' }}
 
 on:
-  schedule:
-    # Temporary acceptance window; restore daily after observing a schedule run.
-    - cron: '*/5 * * * *'
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'probe waits 5 minutes, then starts the daily chain; auto waits 24 hours'
+        type: choice
+        options: [probe, auto]
+        default: probe
+      parent_run_id:
+        description: 'Automatic continuation identifier; leave empty when starting a chain'
+        type: string
+        default: ''
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: scheduled-deal-refresh
   cancel-in-progress: false
 
 jobs:
+  timer:
+    if: ${{ inputs.mode == 'probe' || inputs.mode == 'auto' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    environment:
+      name: ${{ inputs.mode == 'auto' && 'refresh-delay-24h' || 'refresh-delay-5m' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Verify minimum server-side delay
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TIMER_MODE: ${{ inputs.mode }}
+        run: python3 tools/controller.py check-delay
+
   refresh:
+    needs: timer
+    permissions:
+      contents: write
     uses: wlzh/let-deals-radar/.github/workflows/update.yml@main
     with:
       target_repository: wlzh/let-deals-radar
@@ -23,17 +53,27 @@ jobs:
     secrets:
       REPO_PUSH_KEY: ${{ secrets.LDR_REPO_PUSH_KEY }}
 
-  record:
-    needs: refresh
+  finalize:
+    needs: [timer, refresh]
+    if: ${{ always() && !cancelled() && needs.timer.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
-      - name: Record verified success and keep scheduler active
+      - name: Test continuation controller
+        id: tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Record verified success
+        id: record
+        if: ${{ needs.refresh.result == 'success' }}
         env:
           REFRESHED_SHA: ${{ needs.refresh.outputs.refreshed_sha }}
+          TIMER_MODE: ${{ inputs.mode }}
         run: |
           python3 - <<'PY'
           from datetime import datetime, timezone
@@ -48,11 +88,23 @@ jobs:
               'completed_at': datetime.now(timezone.utc).isoformat(),
               'source_repository': 'wlzh/let-deals-radar',
               'source_revision': sha,
+              'timer_mode': os.environ['TIMER_MODE'],
               'run_url': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
           }
           Path('last-success.json').write_text(json.dumps(record, indent=2) + '\n')
           PY
-          git add last-success.json
-          git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m 'chore: record verified refresh'
+      - name: Queue next daily run exactly once
+        id: queue
+        if: ${{ !cancelled() && steps.tests.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/controller.py queue-next
+      - name: Persist success and continuation audit
+        if: ${{ !cancelled() && (steps.record.outcome == 'success' || steps.queue.outcome == 'success') }}
+        run: |
+          if [ -f last-success.json ]; then git add last-success.json; fi
+          if [ -f .next-run.json ]; then git add .next-run.json; fi
+          if git diff --cached --quiet; then exit 0; fi
+          git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m 'chore: record refresh and daily continuation'
           git pull --rebase origin main
           git push origin HEAD:main

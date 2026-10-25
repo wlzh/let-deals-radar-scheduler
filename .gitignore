@@ -2,3 +2,5 @@
 *.key
 deploy_key*
 .env
+__pycache__/
+*.py[cod]
