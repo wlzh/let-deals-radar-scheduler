@@ -77,3 +77,20 @@ and [GITHUB_TOKEN dispatch exceptions](https://docs.github.com/en/actions/how-to
 The original fork also accepts source `push` and manual runs. Concurrent source
 updates cause stale builds to fail without overwriting newer code; start a fresh
 run rather than force-pushing. Generated-data commits do not create refresh loops.
+
+## Telegram Publication And Private Alerts
+
+Configure credentials using `python3 -m tools.configure_telegram` in the original
+`let-deals-radar` checkout. The setup saves `TELEGRAM_BOT_TOKEN`,
+`TELEGRAM_TARGETS`, and `TELEGRAM_ALERT_CHAT_ID` as Secrets in both repositories.
+Never put the token in source, command arguments, or chat messages.
+
+Only verified deal changes are published to the six configured groups/channels.
+Refresh, timer, continuation, and notification errors go only to the operator's
+private conversation with the bot, never to publication targets. No-change runs
+do not publish. An alert destination is checked to be a private Telegram chat.
+
+Setup and connection tests only send privately. Confirm public delivery using a
+real successful refresh and its receipt artifact; secret names alone are not
+proof of delivery. If GitHub or Telegram itself is unavailable, alerts from this
+chain cannot be guaranteed. Keep GitHub Actions failure email enabled as backup.

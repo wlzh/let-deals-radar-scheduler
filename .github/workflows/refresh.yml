@@ -52,6 +52,9 @@ jobs:
       recent_days: '90'
     secrets:
       REPO_PUSH_KEY: ${{ secrets.LDR_REPO_PUSH_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_TARGETS: ${{ secrets.TELEGRAM_TARGETS }}
+      TELEGRAM_ALERT_CHAT_ID: ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
 
   finalize:
     needs: [timer, refresh]
@@ -108,3 +111,24 @@ jobs:
           git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m 'chore: record refresh and daily continuation'
           git pull --rebase origin main
           git push origin HEAD:main
+
+  alert:
+    needs: [timer, refresh, finalize]
+    if: ${{ always() && !cancelled() && (needs.timer.result == 'failure' || needs.refresh.result == 'failure' || needs.finalize.result == 'failure') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: wlzh/let-deals-radar
+          ref: main
+          persist-credentials: false
+      - name: Alert refresh, timer or continuation failure
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ALERT_CHAT_ID: ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
+          REFRESH_STATUS: failure
+          FAILURE_STAGE: timer=${{ needs.timer.result }}; refresh=${{ needs.refresh.result }}; continuation=${{ needs.finalize.result }}
+        run: python3 -m tools.telegram_notify
