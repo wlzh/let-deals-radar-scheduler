@@ -94,3 +94,11 @@ Setup and connection tests only send privately. Confirm public delivery using a
 real successful refresh and its receipt artifact; secret names alone are not
 proof of delivery. If GitHub or Telegram itself is unavailable, alerts from this
 chain cannot be guaranteed. Keep GitHub Actions failure email enabled as backup.
+
+Verified on 2026-10-26: timer probe 40292914853 completed the full pipeline and
+queued a continuation. After secure Telegram setup, that waiter was replaced
+once with 40294433398 so repository secrets are loaded on the newly queued run.
+Its environment wait is 1440 minutes, starting at 2026-10-26 08:45:05 UTC.
+The original repository's publication run 40294830720 returned delivered receipts
+for all six targets, and private connection test 40294828713 succeeded. Public
+updates and private diagnostics use Chinese and include https://vps.869hr.uk.

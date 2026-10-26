@@ -1,8 +1,9 @@
 {
-  "recorded_at": "2026-10-26T08:39:56.378706+00:00",
-  "parent_run_id": 40292914853,
-  "next_run_id": 40293834007,
-  "next_run_url": "https://github.com/wlzh/let-deals-radar-scheduler/actions/runs/40293834007",
-  "observed_status": "pending",
-  "delay_minutes": 1440
+  "recorded_at": "2026-10-26T08:50:43+00:00",
+  "parent_run_id": null,
+  "next_run_id": 40294433398,
+  "next_run_url": "https://github.com/wlzh/let-deals-radar-scheduler/actions/runs/40294433398",
+  "observed_status": "waiting",
+  "delay_minutes": 1440,
+  "reason": "Operator restarted the daily waiter after Telegram secrets were saved; old waiter cancelled."
 }
