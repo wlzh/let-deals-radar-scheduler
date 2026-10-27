@@ -1,7 +1,7 @@
 {
-  "completed_at": "2026-10-26T08:39:51.951111+00:00",
+  "completed_at": "2026-10-27T08:47:46.670109+00:00",
   "source_repository": "wlzh/let-deals-radar",
-  "source_revision": "e618f9e14aa35aa8d816517820fcc4f6ce34e8a1",
-  "timer_mode": "probe",
-  "run_url": "https://github.com/wlzh/let-deals-radar-scheduler/actions/runs/40292914853"
+  "source_revision": "f3f067b07777503f72616f8c99a0b8c26a2bbcad",
+  "timer_mode": "auto",
+  "run_url": "https://github.com/wlzh/let-deals-radar-scheduler/actions/runs/40294433398"
 }
