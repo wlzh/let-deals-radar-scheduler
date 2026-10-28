@@ -1,8 +1,8 @@
 {
-  "recorded_at": "2026-10-27T08:47:51.357711+00:00",
-  "parent_run_id": 40294433398,
-  "next_run_id": 40476015608,
-  "next_run_url": "https://github.com/wlzh/let-deals-radar-scheduler/actions/runs/40476015608",
+  "recorded_at": "2026-10-28T09:01:29.437131+00:00",
+  "parent_run_id": 40476015608,
+  "next_run_id": 40661029842,
+  "next_run_url": "https://github.com/wlzh/let-deals-radar-scheduler/actions/runs/40661029842",
   "observed_status": "pending",
   "delay_minutes": 1440
 }
