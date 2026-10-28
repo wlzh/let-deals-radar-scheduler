@@ -51,6 +51,7 @@ jobs:
       with_replies: true
       recent_days: '90'
     secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       REPO_PUSH_KEY: ${{ secrets.LDR_REPO_PUSH_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_TARGETS: ${{ secrets.TELEGRAM_TARGETS }}
