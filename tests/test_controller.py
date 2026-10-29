@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import unittest
 
-from tools.controller import check_delay, queue_next
+from tools.controller import check_delay, queue_next, next_slot, schedule_inputs, wait_for_slot
 
 
 def run(run_id, title="", status="queued"):
@@ -34,7 +34,9 @@ class ControllerTests(unittest.TestCase):
 
         self.assertEqual(queue_next(api, "example/repo", 1, sleep=lambda _: None), next_run)
         self.assertEqual([c[0] for c in calls].count("POST"), 1)
-        self.assertEqual(calls[1][1]["inputs"], {"mode": "auto", "parent_run_id": "1"})
+        self.assertEqual(calls[1][1]["inputs"]["mode"], "auto")
+        self.assertEqual(calls[1][1]["inputs"]["parent_run_id"], "1")
+        self.assertIn("scheduled_at", calls[1][1]["inputs"])
 
     def test_existing_link_prevents_duplicate_even_if_completed(self):
         next_run = run(2, "Daily refresh after 1", "completed")
@@ -77,6 +79,31 @@ class ControllerTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             queue_next(api, "example/repo", 1, sleep=lambda _: None)
         self.assertEqual(calls.count("POST"), 1)
+
+    def test_next_beijing_slots_and_day_rollover(self):
+        for source, target in [
+            ("2026-10-29T03:30:00+00:00", "2026-10-29T09:00:00+00:00"),
+            ("2026-10-29T09:00:00+00:00", "2026-10-29T21:00:00+00:00"),
+            ("2026-10-29T21:01:00+00:00", "2026-10-30T09:00:00+00:00"),
+        ]:
+            self.assertEqual(next_slot(datetime.fromisoformat(source)).isoformat(), target)
+
+    def test_hour_bucket_leaves_less_than_one_hour(self):
+        inputs = schedule_inputs(datetime(2026, 10, 29, 3, 30, tzinfo=timezone.utc))
+        self.assertEqual(inputs, {"scheduled_at": "2026-10-29T09:00:00+00:00", "timer_hours": "5"})
+
+    def test_wait_reaches_slot(self):
+        sleeps = []
+        wait_for_slot("2026-10-29T03:30:00Z", "2026-10-29T09:00:00Z", 5,
+                      datetime(2026, 10, 29, 8, 30, tzinfo=timezone.utc), sleeps.append)
+        self.assertEqual(sleeps, [1800])
+
+    def test_early_release_and_wrong_slot_fail_closed(self):
+        with self.assertRaises(RuntimeError):
+            wait_for_slot("2026-10-29T03:30:00Z", "2026-10-29T09:00:00Z", 5,
+                          datetime(2026, 10, 29, 8, 29, tzinfo=timezone.utc))
+        with self.assertRaises(ValueError):
+            wait_for_slot("2026-10-29T03:30:00Z", "2026-10-29T10:00:00Z", 5)
 
 
 if __name__ == "__main__":

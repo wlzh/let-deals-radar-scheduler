@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'probe waits 5 minutes, then starts the daily chain; auto waits 24 hours'
+        description: 'probe waits 5 minutes; auto targets 05:00/17:00 Beijing time'
         type: choice
         options: [probe, auto]
         default: probe
@@ -13,6 +13,14 @@ on:
         description: 'Automatic continuation identifier; leave empty when starting a chain'
         type: string
         default: ''
+      scheduled_at:
+        description: 'UTC target slot, computed by tools.controller.schedule_inputs'
+        type: string
+        default: ''
+      timer_hours:
+        description: 'Whole hours to wait server-side (0-11), computed with target slot'
+        type: string
+        default: '0'
 
 permissions:
   contents: read
@@ -25,12 +33,12 @@ jobs:
   timer:
     if: ${{ inputs.mode == 'probe' || inputs.mode == 'auto' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 70
     permissions:
       contents: read
       actions: read
     environment:
-      name: ${{ inputs.mode == 'auto' && 'refresh-delay-24h' || 'refresh-delay-5m' }}
+      name: ${{ inputs.mode == 'auto' && format('refresh-slot-{0}h', inputs.timer_hours) || 'refresh-delay-5m' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,6 +47,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TIMER_MODE: ${{ inputs.mode }}
+          SCHEDULED_AT: ${{ inputs.scheduled_at }}
+          TIMER_HOURS: ${{ inputs.timer_hours }}
         run: python3 tools/controller.py check-delay
 
   refresh:

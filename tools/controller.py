@@ -1,5 +1,5 @@
 """Auditable, bounded Actions continuation without cron or a personal token."""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import json
 import os
 from pathlib import Path
@@ -12,6 +12,43 @@ from urllib.request import Request, urlopen
 
 ACTIVE = {"queued", "in_progress", "waiting", "pending", "requested"}
 DELAYS = {"probe": 5, "auto": 1440}
+
+
+def next_slot(now=None):
+    now = now or datetime.now(timezone.utc)
+    local = now.astimezone(timezone(timedelta(hours=8)))
+    for days in (0, 1):
+        for hour in (5, 17):
+            slot = (local + timedelta(days=days)).replace(hour=hour, minute=0, second=0, microsecond=0)
+            if slot > local:
+                return slot.astimezone(timezone.utc)
+
+
+def schedule_inputs(now=None):
+    now = now or datetime.now(timezone.utc)
+    slot = next_slot(now)
+    hours = min(11, max(0, int((slot - now).total_seconds() // 3600)))
+    return {"scheduled_at": slot.isoformat(), "timer_hours": str(hours)}
+
+
+def wait_for_slot(created_at, scheduled_at, hours, now=None, sleep=time.sleep):
+    now = now or datetime.now(timezone.utc)
+    slot = datetime.fromisoformat(scheduled_at.replace("Z", "+00:00"))
+    created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    if not 0 <= hours <= 11 or slot.tzinfo is None:
+        raise ValueError("Invalid scheduled timer")
+    local = slot.astimezone(timezone(timedelta(hours=8)))
+    if local.hour not in (5, 17) or local.minute or local.second or local.microsecond:
+        raise ValueError("Target must be 05:00 or 17:00 Beijing time")
+    if not 0 < (slot - created).total_seconds() <= 12 * 3600:
+        raise ValueError("Target must be the next scheduled slot")
+    if (now - created).total_seconds() < hours * 3600:
+        raise RuntimeError("Environment timer released early")
+    remaining = (slot - now).total_seconds()
+    if remaining > 3660:
+        raise RuntimeError("Environment timer does not match scheduled slot")
+    if remaining > 0:
+        sleep(remaining)
 
 
 def check_delay(created_at, mode, now=None):
@@ -51,7 +88,7 @@ def github_api(token):
     return request
 
 
-def queue_next(api, repo, current_id, sleep=time.sleep):
+def queue_next(api, repo, current_id, sleep=time.sleep, now=None):
     path = f"/repos/{repo}/actions/workflows/refresh.yml"
     title = f"Daily refresh after {current_id}"
 
@@ -69,7 +106,7 @@ def queue_next(api, repo, current_id, sleep=time.sleep):
     error = None
     try:
         api("POST", path + "/dispatches", {
-            "ref": "main", "inputs": {"mode": "auto", "parent_run_id": str(current_id)},
+            "ref": "main", "inputs": {"mode": "auto", "parent_run_id": str(current_id), **schedule_inputs(now)},
         })
     except HTTPError as exc:
         if exc.code < 500:
@@ -94,8 +131,12 @@ def main():
     api = github_api(os.environ.get("GH_TOKEN"))
     if sys.argv[1] == "check-delay":
         run = api("GET", f"/repos/{repo}/actions/runs/{current_id}")
-        elapsed = check_delay(run["created_at"], os.environ["TIMER_MODE"])
-        print(f"Minimum delay verified: {elapsed:.0f} seconds")
+        if os.environ["TIMER_MODE"] == "auto":
+            wait_for_slot(run["created_at"], os.environ["SCHEDULED_AT"], int(os.environ["TIMER_HOURS"]))
+            print("Scheduled Beijing-time slot reached")
+        else:
+            elapsed = check_delay(run["created_at"], "probe")
+            print(f"Minimum delay verified: {elapsed:.0f} seconds")
     elif sys.argv[1] == "queue-next":
         run = queue_next(api, repo, current_id)
         record = {
@@ -104,7 +145,7 @@ def main():
             "next_run_id": run["id"],
             "next_run_url": run["html_url"],
             "observed_status": run["status"],
-            "delay_minutes": 1440,
+            "schedule_beijing": ["05:00", "17:00"],
         }
         Path(".next-run.json").write_text(json.dumps(record, indent=2) + "\n")
         print("Confirmed continuation: " + run["html_url"])

@@ -28,14 +28,19 @@ in the original project's source code, so future source updates require no copy.
 
 Native cron did not create runs during the observed acceptance window, including
 in this non-fork repository. The primary timer therefore does not depend on cron.
-GitHub environment `refresh-delay-5m` has a 5-minute wait timer; environment
-`refresh-delay-24h` has a 1440-minute wait timer. Waiting does not occupy a runner
-or count as billable wait time. Runner allocation can still add delay.
+The production schedule is **05:00 and 17:00 Asia/Shanghai every day**.
+Environments `refresh-slot-0h` through `refresh-slot-11h` have wait timers of
+0 through 660 minutes respectively. The controller chooses whole hours until
+the next fixed slot; after the environment releases, a runner waits the remaining
+fraction of an hour (at most 61 minutes). Environment waiting is non-billable;
+the final short alignment occupies a runner. Runner allocation can add delay.
 
 Starting `mode=probe` creates a visible waiting run. After five minutes it runs the
 original project's refresh, then dispatches one `mode=auto` continuation. Each auto
-run waits 24 hours before refreshing and queuing its successor. This is a rolling
-daily interval after completion, not a promise to execute at 09:23 each day.
+run targets the next 05:00/17:00 slot before refreshing and queuing its successor.
+Targets are recalculated from wall-clock time, not completion plus 12 hours, so
+normal pipeline runtime does not accumulate drift. Long outages skip missed
+slots rather than publishing a burst of historical updates.
 Only the controller job has `actions: write` on this scheduler repository; it uses
 the ephemeral `GITHUB_TOKEN`, not a stored personal token.
 
@@ -68,7 +73,7 @@ chain is stopped, enable the workflow and dispatch a fresh `probe`. Do not rerun
 an old completed run to restart the chain: continuation IDs are idempotent.
 
 This design intentionally keeps one waiting run visible. Do not rename or delete
-the two timer environments; GitHub's wait timer configuration is part of runtime
+the timer environments; GitHub's wait timer configuration is part of runtime
 configuration, not merely a YAML comment. Unit tests: `python3 -m unittest discover -s tests -v`.
 
 References: [environment wait timers](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)
