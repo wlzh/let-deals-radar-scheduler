@@ -107,3 +107,8 @@ Its environment wait is 1440 minutes, starting at 2026-10-26 08:45:05 UTC.
 The original repository's publication run 40294830720 returned delivered receipts
 for all six targets, and private connection test 40294828713 succeeded. Public
 updates and private diagnostics use Chinese and include https://vps.869hr.uk.
+
+2026-10-29 schedule migration: cancelled rolling waiter `40676900965` and
+started `40812415652` from revision `344ca7d`, targeting 2026-10-29 17:00
+Beijing time. All twelve hourly environment timers were provisioned and checked.
+The new run is confirmed waiting; its future refresh has not yet completed.
