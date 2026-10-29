@@ -1,10 +1,11 @@
 {
-  "recorded_at": "2026-10-29T03:29:32+00:00",
-  "parent_run_id": null,
-  "next_run_id": 40812415652,
-  "next_run_url": "https://github.com/wlzh/let-deals-radar-scheduler/actions/runs/40812415652",
-  "observed_status": "waiting",
-  "scheduled_at": "2026-10-29T09:00:00+00:00",
-  "schedule_beijing": ["05:00", "17:00"],
-  "reason": "Operator replaced cancelled rolling waiter 40676900965 with fixed Beijing-time schedule"
+  "recorded_at": "2026-10-29T09:03:14.729246+00:00",
+  "parent_run_id": 40812415652,
+  "next_run_id": 40846615556,
+  "next_run_url": "https://github.com/wlzh/let-deals-radar-scheduler/actions/runs/40846615556",
+  "observed_status": "queued",
+  "schedule_beijing": [
+    "05:00",
+    "17:00"
+  ]
 }
