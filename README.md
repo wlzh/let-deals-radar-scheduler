@@ -28,17 +28,17 @@ in the original project's source code, so future source updates require no copy.
 
 Native cron did not create runs during the observed acceptance window, including
 in this non-fork repository. The primary timer therefore does not depend on cron.
-The production schedule is **05:00 and 17:00 Asia/Shanghai every day**.
-Environments `refresh-slot-0h` through `refresh-slot-11h` have wait timers of
-0 through 660 minutes respectively. The controller chooses whole hours until
+The production schedule is **05:00 Asia/Shanghai once every day**.
+Environments `refresh-slot-0h` through `refresh-slot-23h` have wait timers of
+0 through 1380 minutes respectively. The controller chooses whole hours until
 the next fixed slot; after the environment releases, a runner waits the remaining
 fraction of an hour (at most 61 minutes). Environment waiting is non-billable;
 the final short alignment occupies a runner. Runner allocation can add delay.
 
 Starting `mode=probe` creates a visible waiting run. After five minutes it runs the
 original project's refresh, then dispatches one `mode=auto` continuation. Each auto
-run targets the next 05:00/17:00 slot before refreshing and queuing its successor.
-Targets are recalculated from wall-clock time, not completion plus 12 hours, so
+run targets the next 05:00 slot before refreshing and queuing its successor.
+Targets are recalculated from wall-clock time, not completion plus 24 hours, so
 normal pipeline runtime does not accumulate drift. Long outages skip missed
 slots rather than publishing a burst of historical updates.
 Only the controller job has `actions: write` on this scheduler repository; it uses

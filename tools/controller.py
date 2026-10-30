@@ -18,7 +18,7 @@ def next_slot(now=None):
     now = now or datetime.now(timezone.utc)
     local = now.astimezone(timezone(timedelta(hours=8)))
     for days in (0, 1):
-        for hour in (5, 17):
+        for hour in (5,):
             slot = (local + timedelta(days=days)).replace(hour=hour, minute=0, second=0, microsecond=0)
             if slot > local:
                 return slot.astimezone(timezone.utc)
@@ -27,7 +27,7 @@ def next_slot(now=None):
 def schedule_inputs(now=None):
     now = now or datetime.now(timezone.utc)
     slot = next_slot(now)
-    hours = min(11, max(0, int((slot - now).total_seconds() // 3600)))
+    hours = min(23, max(0, int((slot - now).total_seconds() // 3600)))
     return {"scheduled_at": slot.isoformat(), "timer_hours": str(hours)}
 
 
@@ -35,12 +35,12 @@ def wait_for_slot(created_at, scheduled_at, hours, now=None, sleep=time.sleep):
     now = now or datetime.now(timezone.utc)
     slot = datetime.fromisoformat(scheduled_at.replace("Z", "+00:00"))
     created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-    if not 0 <= hours <= 11 or slot.tzinfo is None:
+    if not 0 <= hours <= 23 or slot.tzinfo is None:
         raise ValueError("Invalid scheduled timer")
     local = slot.astimezone(timezone(timedelta(hours=8)))
-    if local.hour not in (5, 17) or local.minute or local.second or local.microsecond:
-        raise ValueError("Target must be 05:00 or 17:00 Beijing time")
-    if not 0 < (slot - created).total_seconds() <= 12 * 3600:
+    if local.hour != 5 or local.minute or local.second or local.microsecond:
+        raise ValueError("Target must be 05:00 Beijing time")
+    if not 0 < (slot - created).total_seconds() <= 24 * 3600:
         raise ValueError("Target must be the next scheduled slot")
     if (now - created).total_seconds() < hours * 3600:
         raise RuntimeError("Environment timer released early")
@@ -145,7 +145,7 @@ def main():
             "next_run_id": run["id"],
             "next_run_url": run["html_url"],
             "observed_status": run["status"],
-            "schedule_beijing": ["05:00", "17:00"],
+            "schedule_beijing": ["05:00"],
         }
         Path(".next-run.json").write_text(json.dumps(record, indent=2) + "\n")
         print("Confirmed continuation: " + run["html_url"])

@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'probe waits 5 minutes; auto targets 05:00/17:00 Beijing time'
+        description: 'probe waits 5 minutes; auto targets daily 05:00 Beijing time'
         type: choice
         options: [probe, auto]
         default: probe
@@ -18,7 +18,7 @@ on:
         type: string
         default: ''
       timer_hours:
-        description: 'Whole hours to wait server-side (0-11), computed with target slot'
+        description: 'Whole hours to wait server-side (0-23), computed with target slot'
         type: string
         default: '0'
 

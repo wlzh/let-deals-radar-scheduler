@@ -82,26 +82,27 @@ class ControllerTests(unittest.TestCase):
 
     def test_next_beijing_slots_and_day_rollover(self):
         for source, target in [
-            ("2026-10-29T03:30:00+00:00", "2026-10-29T09:00:00+00:00"),
+            ("2026-10-29T03:30:00+00:00", "2026-10-29T21:00:00+00:00"),
             ("2026-10-29T09:00:00+00:00", "2026-10-29T21:00:00+00:00"),
-            ("2026-10-29T21:01:00+00:00", "2026-10-30T09:00:00+00:00"),
+            ("2026-10-29T21:01:00+00:00", "2026-10-30T21:00:00+00:00"),
+            ("2026-10-29T21:00:00+00:00", "2026-10-30T21:00:00+00:00"),
         ]:
             self.assertEqual(next_slot(datetime.fromisoformat(source)).isoformat(), target)
 
     def test_hour_bucket_leaves_less_than_one_hour(self):
         inputs = schedule_inputs(datetime(2026, 10, 29, 3, 30, tzinfo=timezone.utc))
-        self.assertEqual(inputs, {"scheduled_at": "2026-10-29T09:00:00+00:00", "timer_hours": "5"})
+        self.assertEqual(inputs, {"scheduled_at": "2026-10-29T21:00:00+00:00", "timer_hours": "17"})
 
     def test_wait_reaches_slot(self):
         sleeps = []
-        wait_for_slot("2026-10-29T03:30:00Z", "2026-10-29T09:00:00Z", 5,
-                      datetime(2026, 10, 29, 8, 30, tzinfo=timezone.utc), sleeps.append)
+        wait_for_slot("2026-10-29T03:30:00Z", "2026-10-29T21:00:00Z", 17,
+                      datetime(2026, 10, 29, 20, 30, tzinfo=timezone.utc), sleeps.append)
         self.assertEqual(sleeps, [1800])
 
     def test_early_release_and_wrong_slot_fail_closed(self):
         with self.assertRaises(RuntimeError):
-            wait_for_slot("2026-10-29T03:30:00Z", "2026-10-29T09:00:00Z", 5,
-                          datetime(2026, 10, 29, 8, 29, tzinfo=timezone.utc))
+            wait_for_slot("2026-10-29T03:30:00Z", "2026-10-29T21:00:00Z", 17,
+                          datetime(2026, 10, 29, 20, 29, tzinfo=timezone.utc))
         with self.assertRaises(ValueError):
             wait_for_slot("2026-10-29T03:30:00Z", "2026-10-29T10:00:00Z", 5)
 
