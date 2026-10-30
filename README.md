@@ -112,3 +112,8 @@ updates and private diagnostics use Chinese and include https://vps.869hr.uk.
 started `40812415652` from revision `344ca7d`, targeting 2026-10-29 17:00
 Beijing time. All twelve hourly environment timers were provisioned and checked.
 The new run is confirmed waiting; its future refresh has not yet completed.
+
+2026-10-30: changed to once daily at 05:00 Beijing time. Cancelled the pending
+17:00 run `40954474033` and started `40988720108`, targeting 2026-10-31 05:00.
+Hourly environment timers now cover 0-23 hours. Website timestamps use Beijing
+time while the API retains unambiguous UTC timestamps.
