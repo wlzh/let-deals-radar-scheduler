@@ -1,8 +1,8 @@
 {
-  "recorded_at": "2026-11-13T21:03:30.873709+00:00",
-  "parent_run_id": 43306407140,
-  "next_run_id": 43507197746,
-  "next_run_url": "https://github.com/wlzh/let-deals-radar-scheduler/actions/runs/43507197746",
+  "recorded_at": "2026-11-14T21:02:50.143607+00:00",
+  "parent_run_id": 43507197746,
+  "next_run_id": 43640683011,
+  "next_run_url": "https://github.com/wlzh/let-deals-radar-scheduler/actions/runs/43640683011",
   "observed_status": "pending",
   "schedule_beijing": [
     "05:00"
